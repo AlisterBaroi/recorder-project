@@ -1,300 +1,202 @@
-const { ipcRenderer } = require('electron');
-const { desktopCapturer } = require('electron');   // still used to build stream
-const { dialog, BrowserWindow, screen } = require('@electron/remote');
-const fs = require('fs');
-const parent = require('@electron/remote').getCurrentWindow();
-// To save in MP4 format
-const ffmpegPath = require('ffmpeg-static-electron').path;
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
+/* renderer.js – full version */
+(async () => {
+    /* ── imports ───────────────────────────────────────────── */
+    const { ipcRenderer } = require('electron');
+    const { dialog, BrowserWindow } = require('@electron/remote');
+    const path = require('path');
+    const fs = require('fs');
+    const os = require('os');
+    const { spawn } = require('child_process');
+    const ffmpegPath = require('ffmpeg-static-electron').path;
 
-const recBtn = document.querySelector('.rec-btn');
-const stopBtn = document.querySelector('.stop-btn');
-const settingsBtn = document.querySelector('.settings-btn');
-const clock = document.getElementById('clock');
+    /* ── DOM refs ──────────────────────────────────────────── */
+    const recBtn = document.querySelector('.rec-btn');
+    const stopBtn = document.querySelector('.stop-btn');
+    const settingsBtn = document.querySelector('.settings-btn');
+    const closeBtn = document.querySelector('.close-btn');
+    const clock = document.getElementById('clock');
 
-let prefs = await ipcRenderer.invoke('get-settings');  // load json once
+    /* ── load preferences once ─────────────────────────────── */
+    let prefs = await ipcRenderer.invoke('get-settings');
+    let selectedSourceId = prefs.selectedScreenId || null;
+    let defaultFolder = prefs.saveFolder || null;
+    let videoFormat = prefs.videoFormat || 'webm';
 
-/* apply remembered screen / format / folder */
-selectedSourceId = prefs.selectedScreenId || null;
-let defaultFolder = prefs.saveFolder || null;
-let videoFormat = prefs.videoFormat || 'webm';
-
-let mediaRecorder, chunks = [];
-let selectedSourceId = null, timerRef, t0;
-
-/* helpers */
-const pad = n => String(Math.floor(n)).padStart(2, '0');
-const hms = ms => { const s = ms / 1000 | 0; return `${pad(s / 3600)} : ${pad((s / 60) % 60)} : ${pad(s % 60)}` };
-const lock = () => {
-    recBtn.disabled = true;
-    recBtn.style.pointerEvents = 'none'; // block any further clicks
-    recBtn.style.cursor = 'not-allowed';
-    recBtn.style.backgroundImage = "url('img/Record-Button-Activate.svg')";
-    clock.style.color = '#AF2031';
-};
-const unlock = () => {
-    recBtn.disabled = false;
-    recBtn.style.pointerEvents = 'auto';  // re‑enable clicks
-    recBtn.style.cursor = ''; // reset cursor
-    recBtn.style.backgroundImage = "";
-    clock.style.color = '#D9D9D9';
-};
-
-/* ask main‑process to open picker window and return chosen screen id */
-async function pickScreen() {
-    selectedSourceId = await ipcRenderer.invoke('pick-screen').catch(() => null);
-    if (selectedSourceId) console.log('Chosen screen id', selectedSourceId);
-}
-
-function streamFor(id) {
-    return navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: id, maxFrameRate: 30 } }
+    /* live update when settings window saves */
+    ipcRenderer.on('settings-updated', (_, obj) => {
+        prefs = { ...prefs, ...obj };
+        selectedSourceId = prefs.selectedScreenId;
+        defaultFolder = prefs.saveFolder;
+        videoFormat = prefs.videoFormat;
     });
-}
 
-async function startRec() {
-    if (mediaRecorder?.state === 'recording') return;
-    if (!selectedSourceId) await pickScreen();
-    if (!selectedSourceId) return; // user cancelled
-    try {
+    /* ── state vars ────────────────────────────────────────── */
+    let mediaRecorder, chunks = [], timerRef, t0;
+
+    /* ── helpers ───────────────────────────────────────────── */
+    const pad = n => String(Math.floor(n)).padStart(2, '0');
+    const hms = ms => {
+        const s = (ms / 1000) | 0;
+        return `${pad(s / 3600)} : ${pad((s / 60) % 60)} : ${pad(s % 60)}`;
+    };
+
+    const lock = () => {
+        recBtn.disabled = true;
+        recBtn.style.pointerEvents = 'none';
+        recBtn.style.cursor = 'not-allowed';
+        recBtn.style.backgroundImage = "url('img/Record-Button-Activate.svg')";
+        clock.style.color = '#AF2031';
+    };
+    const unlock = () => {
+        recBtn.disabled = false;
+        recBtn.style.pointerEvents = 'auto';
+        recBtn.style.cursor = '';
+        recBtn.style.backgroundImage = '';
+        clock.style.color = '#D9D9D9';
+    };
+
+    /* ── pick a screen (modal from main) ───────────────────── */
+    async function pickScreen() {
+        selectedSourceId = await ipcRenderer.invoke('pick-screen').catch(() => null);
+        prefs.selectedScreenId = selectedSourceId;
+    }
+
+    /* ── build a MediaStream for that screen ───────────────── */
+    function streamFor(id) {
+        return navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: id,
+                    maxFrameRate: 30
+                }
+            }
+        });
+    }
+
+    /* ── start recording ───────────────────────────────────── */
+    async function startRec() {
+        if (mediaRecorder?.state === 'recording') return;
+        if (!selectedSourceId) await pickScreen();
+        if (!selectedSourceId) return;             // user cancelled
+
         const stream = await streamFor(selectedSourceId);
 
-        // mediaRecorder = new MediaRecorder(stream);
-        const useMp4 = videoFormat === 'mp4';
+        const wantMp4 = videoFormat === 'mp4';
         const MP4 = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
-        // const mediaOpts = MediaRecorder.isTypeSupported(MP4) ? { mimeType: MP4 } : {};
-        const mediaOpts = useMp4 && MediaRecorder.isTypeSupported(MP4) ? { mimeType: MP4 } : {};
-        mediaRecorder = new MediaRecorder(stream, mediaOpts);
+        const opts = wantMp4 && MediaRecorder.isTypeSupported(MP4) ? { mimeType: MP4 } : {};
+        mediaRecorder = new MediaRecorder(stream, opts);
+
         chunks = [];
         mediaRecorder.ondataavailable = e => e.data.size && chunks.push(e.data);
         mediaRecorder.onstop = saveFile;
 
-
         mediaRecorder.start();
         lock();
-
         t0 = Date.now();
-        timerRef = setInterval(() => clock.textContent = hms(Date.now() - t0), 1000);
-    } catch (err) { console.error(err); }
-}
-// Saving in WebM format
-// async function saveFile() {
-//     clearInterval(timerRef);
-//     clock.textContent = '00 : 00 : 00';
-//     unlock();
-//     // const blob = new Blob(chunks, { type: 'video/webm' });
-//     // const buffer = Buffer.from(await blob.arrayBuffer());
-//     // const { canceled, filePath } = await dialog.showSaveDialog({ defaultPath: `recording-${Date.now()}.webm` });
-//     // if (!canceled && filePath) fs.writeFileSync(filePath, buffer);
-//     const fullMime = mediaRecorder.mimeType || 'video';
-//     // const fullMime = mediaRecorder.mimeType || 'video/webm';
-//     const ext = fullMime.includes('mp4') ? 'mp4' : 'webm';
-//     const blob = new Blob(chunks, { type: fullMime });
-//     const buffer = Buffer.from(await blob.arrayBuffer());
+        timerRef = setInterval(() => (clock.textContent = hms(Date.now() - t0)), 1000);
+    }
 
-//     const { canceled, filePath } = await dialog.showSaveDialog({
-//         defaultPath: `recording-${Date.now()}.${ext}`,
-//         filters: [{ name: 'Video', extensions: [ext] }]
-//     });
-//     if (!canceled && filePath) fs.writeFileSync(filePath, buffer);
-// }
+    /* ── save & (if needed) transcode ──────────────────────── */
+    async function saveFile() {
+        clearInterval(timerRef);
+        clock.textContent = '00 : 00 : 00';
+        unlock();
 
-// Saving recording in MP4 format
-// async function saveFile() {
-//     clearInterval(timerRef); clock.textContent = '00 : 00 : 00'; unlock();
+        /* what did MediaRecorder actually give us? */
+        const recordedMime = mediaRecorder.mimeType || 'video/webm';
+        const srcExt = recordedMime.includes('mp4') ? 'mp4' : 'webm';
 
-//     /* Save the raw capture (WebM or MP4) to a temp file */
-//     const fullMime = mediaRecorder.mimeType || 'video/webm';
-//     const srcExt = fullMime.includes('mp4') ? 'mp4' : 'webm';
-//     const tempRaw = path.join(os.tmpdir(), `capture-${Date.now()}.${srcExt}`);
-//     fs.writeFileSync(tempRaw, Buffer.from(await new Blob(chunks, { type: fullMime }).arrayBuffer()));
+        /* write raw chunks to a temp file */
+        const tempFile = path.join(os.tmpdir(), `capture-${Date.now()}.${srcExt}`);
+        fs.writeFileSync(
+            tempFile,
+            Buffer.from(await new Blob(chunks, { type: recordedMime }).arrayBuffer())
+        );
 
-//     /* Ask where to put the final MP4 */
-//     const { canceled, filePath } = await dialog.showSaveDialog({
-//         defaultPath: `recording-${Date.now()}.mp4`,
-//         filters: [{ name: 'MP4 video', extensions: ['mp4'] }]
-//     });
-//     if (canceled || !filePath) { fs.unlinkSync(tempRaw); return; }
+        /* destination dialog honours user's chosen format */
+        const targetExt = videoFormat;                       // 'mp4' or 'webm'
+        const startDir = defaultFolder || os.homedir();
+        const dlg = await dialog.showSaveDialog({
+            defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
+            filters: [{ name: 'Video', extensions: [targetExt] }]
+        });
+        if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
 
-//     /* If we ALREADY recorded MP4, just rename / copy */
-//     if (srcExt === 'mp4') {
-//         fs.copyFileSync(tempRaw, filePath.endsWith('.mp4') ? filePath : `${filePath}.mp4`); fs.unlinkSync(tempRaw); return;
-//     }
+        const finalPath = dlg.filePath.endsWith(`.${targetExt}`)
+            ? dlg.filePath
+            : `${dlg.filePath}.${targetExt}`;
 
-//     /* Otherwise transcode with the bundled FFmpeg */
-//     const args = [
-//         '-i', tempRaw,
-//         '-c:v', 'libx264',      // H.264
-//         '-preset', 'veryfast',
-//         '-crf', '22',
-//         '-c:a', 'aac',
-//         '-b:a', '192k',
-//         '-movflags', '+faststart',
-//         filePath
-//     ];
-
-//     // Only log warnings and errors
-//     const ff = spawn(ffmpegPath, ['-loglevel', 'warning', ...args], { stdio: 'ignore' });
-
-//     // Default terminal output during transcoding
-//     // const ff = spawn(ffmpegPath, args, { stdio: 'inherit' });
-
-//     // ff.on('close', code => {
-//     //     fs.unlinkSync(tempRaw);
-//     //     if (code !== 0) dialog.showErrorBox('FFmpeg error', `Transcoding failed (code ${code}).`);
-//     // });
-
-//     ff.stderr.on('data', d => {
-//         const m = /time=(\\d+):(\\d+):(\\d+\\.\\d+)/.exec(d.toString());
-//         if (m) /* update UI */;
-//     });
-
-// }
-
-
-async function saveFile() {
-    clearInterval(timerRef); clock.textContent = '00 : 00 : 00'; unlock();
-
-    /* ── 1. write raw capture (webm/mp4) to a temp file ───────────────── */
-    const fullMime = mediaRecorder.mimeType || 'video/webm';
-
-    // const srcExt = fullMime.includes('mp4') ? 'mp4' : 'webm';
-    // const tmpSrc = path.join(os.tmpdir(), `capture-${Date.now()}.${srcExt}`);
-    // fs.writeFileSync(tmpSrc, Buffer.from(await new Blob(chunks, { type: fullMime }).arrayBuffer()));
-    const ext = fullMime.includes('mp4') ? 'mp4' : 'webm';
-    const rawBlob = new Blob(chunks, { type: fullMime });
-    const tempFile = path.join(os.tmpdir(), `capture-${Date.now()}.${ext}`);
-    fs.writeFileSync(tempFile, Buffer.from(await rawBlob.arrayBuffer()));
-
-    // /* 2. ask where to save the final MP4 */
-    // const { canceled, filePath } = await dialog.showSaveDialog({
-    //     defaultPath: `recording-${Date.now()}.mp4`,
-    //     filters: [{ name: 'MP4 video', extensions: ['mp4'] }]
-    // });
-    // if (canceled || !filePath) { fs.unlinkSync(tmpSrc); return; }
-    // /* 3. if already mp4, just copy */
-    // if (srcExt === 'mp4') {
-    //     fs.copyFileSync(tmpSrc, filePath);
-    //     fs.unlinkSync(tmpSrc);
-    //     return;
-    // }
-
-    /* default folder logic */
-    const startDir = defaultFolder || os.homedir();
-    const dlg = await dialog.showSaveDialog({
-        defaultPath: path.join(startDir, `recording-${Date.now()}.${ext}`),
-        filters: [{ name: 'Video', extensions: [ext] }]
-    });
-    if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
-    const finalPath = dlg.filePath;
-
-    /* 4. show a small progress window */
-    const parent = require('@electron/remote').getCurrentWindow();
-    const { width } = screen.getPrimaryDisplay().workArea;
-    // const progressWin = new BrowserWindow({
-    //     width: 320, height: 80,
-    //     frame: false,
-    //     resizable: false,
-    //     modal: true,
-    //     parent,
-    //     alwaysOnTop: true,
-    //     movable: false,
-    //     minimizable: false,
-    //     webPreferences: { nodeIntegration: true, contextIsolation: false }
-    // });
-    const progressWin = new BrowserWindow({
-        width: 320, height: 80, resizable: false, modal: true, parent,
-        transparent: true, backgroundColor: '#00000000', frame: false, titleBarStyle: 'hidden',
-        alwaysOnTop: true, center: true, webPreferences: { nodeIntegration: true, contextIsolation: false }
-    });
-
-    progressWin.center(); progressWin.setMenuBarVisibility(false);
-    //     const html = `
-    //   <html><body style="margin:10px;background:#1e1e1e;color:#ddd;
-    //                      font-family:sans-serif;display:flex;flex-direction:column;
-    //                      align-items:center;justify-content:center">
-    //       <div>Saving MP4… <span id="pct">0</span>%</div>
-    //       <progress id="bar" value="0" max="1" style="width:90%;height:6px"></progress>
-    //   </body></html>
-    // `;
-    //     progressWin.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
-    progressWin.loadFile('progress.html');   // ← use the new standalone file
-    // progressWin.loadURL(`data:text/html,
-    // <html>
-    //     <body style="margin:0;background:#1e1e1e;color:#ddd;
-    //                    font-family:sans-serif;display:flex;flex-direction:column;
-    //                    align-items:center;justify-content:center">
-    //             <div>Saving MP4… 
-    //                 <span id=pct>0</span>%
-    //             </div>
-    //         <progress id=bar style="width:90%;height:6px">
-    //         </progress>
-    //     </body>
-    // </html>`);
-
-    /* 5. run FFmpeg with progress output */
-    const args = [
-        '-i', tmpSrc,
-        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
-        '-c:a', 'aac', '-b:a', '192k',
-        '-movflags', '+faststart',
-        '-progress', 'pipe:1',        // key=value lines on stdout
-        '-nostats',                   // suppress the console bar
-        filePath
-    ];
-
-    const ff = spawn(ffmpegPath, args);
-
-    /* total duration of source (secs) — ffprobe is over-kill; parse MediaRecorder time: */
-    const totalMs = Date.now() - t0;         // VERY close approximation
-
-    ff.stdout.on('data', d => {
-        const m = /out_time_ms=(\d+)/.exec(d.toString());
-        if (m) {
-            const done = Math.min(+m[1] / (totalMs * 1000), 1);   // 0 → 1
-            progressWin.webContents.send('progress', done);       // <<< send to html
+        /* 1️⃣  if container already matches → quick copy */
+        if (srcExt === targetExt) {
+            fs.copyFileSync(tempFile, finalPath);
+            fs.unlinkSync(tempFile);
+            return afterSave(finalPath);
         }
-    });
 
-    // ff.stdout.on('data', d => {
-    //     // out_time_ms gives microseconds encoded so far
-    //     const m = /out_time_ms=(\d+)/.exec(d.toString());
-    //     if (m) {
-    //         const micros = Number(m[1]);
-    //         const done = Math.min(micros / (totalMs * 1000), 1);  // micro ➜ milli
-    //         progressWin.webContents.executeJavaScript(`
-    //   document.getElementById('bar').value = ${done};
-    //   document.getElementById('pct').textContent = ${(done * 100).toFixed(0)};
-    // `);
-    //     }
-    // });
+        /* 2️⃣  need to transcode (only mp4 path for now) */
+        if (targetExt === 'mp4') {
+            return transcodeToMp4(tempFile, finalPath);
+        }
 
-    ff.on('close', code => {
-        fs.unlinkSync(tmpSrc);
-        progressWin.close();
-        if (code !== 0)
-            dialog.showErrorBox('FFmpeg error', `Transcoding failed (code ${code}).`);
-    });
+        /* 3️⃣  targetExt === 'webm' but we recorded mp4 (rare) */
+        fs.copyFileSync(tempFile, finalPath);     // simplest fallback
+        fs.unlinkSync(tempFile);
+        afterSave(finalPath);
+    }
 
-    /* remember folder & screen for next run */
-    defaultFolder = path.dirname(finalPath);
-    prefs.saveFolder = defaultFolder;
-    prefs.selectedScreenId = selectedSourceId;
-    prefs.videoFormat = videoFormat;
+    /* run ffmpeg + show progress window */
+    function transcodeToMp4(src, dest) {
+        const progressWin = new BrowserWindow({
+            width: 320, height: 80, resizable: false, modal: true,
+            parent: require('@electron/remote').getCurrentWindow(),
+            frame: false, transparent: true, backgroundColor: '#00000000',
+            alwaysOnTop: true, center: true,
+            webPreferences: { nodeIntegration: true, contextIsolation: false }
+        });
+        progressWin.loadFile('progress.html');
 
-    ipcRenderer.invoke('settings-save', prefs);   // persist to JSON
-}
+        const totalMs = Date.now() - t0;          // rough duration
+        const ff = spawn(ffmpegPath, [
+            '-i', src,
+            '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '22',
+            '-c:a', 'aac', '-b:a', '192k',
+            '-movflags', '+faststart',
+            '-progress', 'pipe:1', '-nostats',
+            dest
+        ]);
 
+        ff.stdout.on('data', d => {
+            const m = /out_time_ms=(\\d+)/.exec(d.toString());
+            if (m) {
+                const done = Math.min(+m[1] / (totalMs * 1000), 1);
+                progressWin.webContents.send('progress', done);
+            }
+        });
 
+        ff.on('close', code => {
+            fs.unlinkSync(src);
+            progressWin.close();
+            if (code === 0) afterSave(dest);
+            else dialog.showErrorBox('FFmpeg error', `Transcoding failed (code ${code}).`);
+        });
+    }
 
+    /* remember prefs & persist */
+    function afterSave(finalPath) {
+        defaultFolder = path.dirname(finalPath);
+        prefs.saveFolder = defaultFolder;
+        prefs.selectedScreenId = selectedSourceId;
+        prefs.videoFormat = videoFormat;
+        ipcRenderer.invoke('settings-save', prefs);
+    }
 
+    /* ── UI event wiring ───────────────────────────────────── */
+    settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
+    recBtn.addEventListener('click', startRec);
+    stopBtn.addEventListener('click', () => mediaRecorder?.stop());
+    closeBtn.addEventListener('click', () =>
+        require('@electron/remote').getCurrentWindow().close());
 
-const closeBtn = document.querySelector('.close-btn');
-// settingsBtn.addEventListener('click', pickScreen);
-settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
-recBtn.addEventListener('click', startRec);
-stopBtn.addEventListener('click', () => mediaRecorder?.stop());
-closeBtn.addEventListener('click', () => require('@electron/remote').getCurrentWindow().close());
+})();

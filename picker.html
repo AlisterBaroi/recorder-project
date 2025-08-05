@@ -16,7 +16,8 @@
     ipcRenderer.on('screens', (_, list) => {
         list.forEach(scr => {
             const btn = document.createElement('button');
-            btn.innerHTML = `<img src="${scr.dataURL}"><label>${scr.name}</label>`;
+            // btn.innerHTML = `<img src="${scr.dataURL}"><label>${scr.name}</label>`;
+            btn.innerHTML = `<img src="${scr.dataURL}"><label>${scr.id}</label>`;
             btn.onclick = () => ipcRenderer.send('screen-chosen', scr.id);
             document.body.appendChild(btn);
         });

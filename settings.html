@@ -3,28 +3,29 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- Inter font for the timer -->
-    <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Inter for future use -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/settings.css">
     <title>Settings</title>
 </head>
 
 <body>
-
     <nav>
-        <button data-tab="general" class="active">General&nbsp;Settings</button>
-        <button data-tab="screen">Select&nbsp;Screen</button>
-        <button data-tab="files">File&nbsp;&amp;&nbsp;Folder</button>
+        <!-- <h1 style="align-self: center;margin: 10px 0;">Settings</h1> -->
+        <img src="img/Record-Button-Hover.svg" style="padding: 15px 5px;" alt="">
+        <button data-tab="general" class="active">General Settings</button>
+        <button data-tab="screen">Select Screen</button>
+        <button data-tab="files">File & Folder</button>
         <button data-tab="about">About</button>
     </nav>
 
     <div id="content">
-        <!-- General Settings -->
+        <!-- General -->
         <section id="tab-general" class="active">
-            <h2>General Settings</h2>
+            <h1>General Settings</h1>
+            <hr>
             <label><input type="checkbox" id="alwaysOnTop"> Window always on top</label><br><br>
-
             <label>Open position:
                 <select id="openPos">
                     <option value="top-centre">Top-centre</option>
@@ -32,26 +33,35 @@
                     <option value="bottom-centre">Bottom-centre</option>
                 </select>
             </label><br><br>
-
-            <!-- Place-holders for future options -->
             <p>Theme: <em>(coming soon)</em></p>
             <p>Fonts: <em>(coming soon)</em></p>
         </section>
 
-        <!-- Select Screen -->
-        <section id="tab-screen">
-            <h2>Select Screen</h2>
-            <div id="screenList"><!-- filled by JS --></div>
-            <p style="margin-top:12px">Selected: <span id="screenChosen">None</span></p>
+        <!-- Screen -->
+        <section id="tab-screen" style="position:relative; height:100%;">
+            <h1>Select Screen</h1>
+            <hr>
+            <p>Choose the screen you want to record.</p>
+            <div id="screenList"></div>
+            <h2 style="position:absolute; bottom:20px; left:0;">Selected: <span id="screenChosen">None</span>
+            </h2>
         </section>
 
-        <!-- File & Folder -->
+        <!-- Screen
+        <section id="tab-screen" class="flex-col">
+            <h1>Select Screen</h1>
+            <div id="screenList" class="grid"></div>
+            <p id="selectedLine">Selected: <span id="screenChosen">None</span></p>
+        </section> -->
+
+
+        <!-- Files -->
         <section id="tab-files">
-            <h2>File &amp; Folder</h2>
-            <label>Save folder: <span id="savePath">(not set)</span>
+            <h1>File &amp; Folder</h1>
+            <hr>
+            <label>Save folder: <span id="savePath">(ask every time)</span>
                 <button id="chooseFolder">Browse…</button>
             </label><br><br>
-
             <label>Video format:
                 <select id="videoFormat">
                     <option value="webm">WebM (fast)</option>
@@ -62,7 +72,8 @@
 
         <!-- About -->
         <section id="tab-about">
-            <h2>About</h2>
+            <h1>About</h1>
+            <hr>
             <p>Author: <a href="https://github.com/yourname" target="_blank">yourname</a></p>
             <p>GitHub project: <a href="https://github.com/yourrepo" target="_blank">Star us on GitHub</a></p>
             <p>Donate / Sponsor: <em>(coming soon)</em></p>
@@ -70,106 +81,90 @@
         </section>
     </div>
 
-    <!-- <footer>
-        <button id="resetBtn" style="background:#555">Reset</button>
-        <button id="closeBtn" style="background:#555">Close</button>
-        <button id="saveBtn">Save</button>
-    </footer> -->
-
     <footer>
         <button id="resetBtn" style="background:#555">Reset</button>
-
-        <div style="margin-left:auto"> <!-- pushes following buttons to the right -->
+        <div style="margin-left:auto">
             <button id="closeBtn" style="background:#555">Close</button>
             <button id="saveBtn">Save</button>
         </div>
     </footer>
 
-    <!-- <script>
-        /* basic tab switching */
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelector('nav button.active').classList.remove('active');
-                document.querySelector('#content section.active').classList.remove('active');
-                btn.classList.add('active');
-                document.querySelector('#tab-' + btn.dataset.tab).classList.add('active');
-            });
-        });
-
-        /* TODO: load settings.json, populate controls, wire up save / reset / close */
-
-        /* placeholder handlers for bottom buttons */
-        document.getElementById('closeBtn').onclick = () => require('@electron/remote').getCurrentWindow().close();
-        document.getElementById('resetBtn').onclick = () => alert('reset to defaults - todo');
-        document.getElementById('saveBtn').onclick = () => alert('save settings - todo');
-    </script> -->
     <script>
-        const { ipcRenderer, shell } = require('electron');
-        let current = {};   // local copy of settings
-
-        /* ── UI helpers ─────────────────────── */
-        function $(sel) { return document.querySelector(sel); }
-        function populate() {
-            $('#alwaysOnTop').checked = current.alwaysOnTop;
-            $('#openPos').value = current.openPos;
-            $('#savePath').textContent = current.saveFolder || '(ask every time)';
-            $('#videoFormat').value = current.videoFormat;
-            $('#screenChosen').textContent = current.selectedScreenId || 'None';
-        }
-
-        /* load on launch */
-        ipcRenderer.invoke('settings-load').then(s => { current = s; populate(); });
-
-        /* EVENTS ------------------------------------------------------------- */
-        $('#alwaysOnTop').onchange = e => current.alwaysOnTop = e.target.checked;
-        $('#openPos').onchange = e => current.openPos = e.target.value;
-        $('#videoFormat').onchange = e => current.videoFormat = e.target.value;
-
-        $('#chooseFolder').onclick = async () => {
+        window.onload = () => {
+            const { ipcRenderer } = require('electron');
             const { dialog } = require('@electron/remote');
-            const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-            if (!r.canceled && r.filePaths[0]) {
-                current.saveFolder = r.filePaths[0];
-                $('#savePath').textContent = current.saveFolder;
+            let current = {};               // holds prefs in memory
+
+            /* util */
+            const $ = sel => document.querySelector(sel);
+
+            /* populate UI from object */
+            function fill() {
+                $('#alwaysOnTop').checked = current.alwaysOnTop;
+                $('#openPos').value = current.openPos;
+                $('#savePath').textContent = current.saveFolder || '(ask every time)';
+                $('#videoFormat').value = current.videoFormat;
+                $('#screenChosen').textContent = current.selectedScreenId || 'None';
             }
-        };
 
-        /* screen picker reused from main process */
-        ipcRenderer.on('screens', (_, list) => {
-            const wrap = $('#screenList');
-            wrap.innerHTML = '';
-            list.forEach(scr => {
-                const b = document.createElement('button');
-                b.style = 'border:none;background:#333;margin:4px;cursor:pointer';
-                b.innerHTML = `<img src=\"${scr.dataURL}\" width=120><br>${scr.name}`;
-                b.onclick = () => {
-                    current.selectedScreenId = scr.id;
-                    $('#screenChosen').textContent = scr.id;
-                };
-                wrap.appendChild(b);
+            /* ── fetch settings on load ── */
+            ipcRenderer.invoke('get-settings').then(s => { current = s; fill(); });
+
+            /* ── navigation: generic handler ── */
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    document.querySelector('nav button.active')?.classList.remove('active');
+                    document.querySelector('#content section.active')?.classList.remove('active');
+                    btn.classList.add('active');
+                    $('#tab-' + btn.dataset.tab).classList.add('active');
+
+                    /* If Screen tab activated, request thumbnails */
+                    if (btn.dataset.tab === 'screen') {
+                        await ipcRenderer.invoke('pick-screen-list');
+                    }
+                });
             });
-        });
-        $('#tab-screen').addEventListener('mouseenter', () => {
-            ipcRenderer.invoke('pick-screen-list'); // just send list without closing picker
-        });
 
-        /* bottom bar buttons */
-        $('#saveBtn').onclick = () => ipcRenderer.invoke('settings-save', current)
-            .then(() => window.close());
+            /* ── react to controls ── */
+            $('#alwaysOnTop').onchange = e => current.alwaysOnTop = e.target.checked;
+            $('#openPos').onchange = e => current.openPos = e.target.value;
+            $('#videoFormat').onchange = e => current.videoFormat = e.target.value;
 
-        $('#resetBtn').onclick = () => {
-            ipcRenderer.invoke('settings-reset').then(() => {
+            $('#chooseFolder').onclick = async () => {
+                const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+                if (!r.canceled && r.filePaths[0]) {
+                    current.saveFolder = r.filePaths[0];
+                    $('#savePath').textContent = current.saveFolder;
+                }
+            };
+
+            /* receive thumbnail list for Screen tab */
+            ipcRenderer.on('screens', (_, list) => {
+                const wrap = $('#screenList'); wrap.innerHTML = '';
+                list.forEach(scr => {
+                    const btn = document.createElement('button');
+                    btn.style = 'border:none;background:#333;margin:4px;cursor:pointer;color:#D9D9D9;';
+                    // btn.innerHTML = `<img src=\"${scr.dataURL}\" width=120><br>${scr.name}`;
+                    btn.innerHTML = `<img src=\"${scr.dataURL}\" width=150><br>${scr.id}`;
+                    btn.onclick = () => {
+                        current.selectedScreenId = scr.id;
+                        $('#screenChosen').textContent = scr.id;
+                    };
+                    wrap.appendChild(btn);
+                });
+            });
+
+            /* ── footer buttons ── */
+            $('#saveBtn').onclick = () => ipcRenderer.invoke('settings-save', current).then(() => window.close());
+            $('#resetBtn').onclick = () => ipcRenderer.invoke('settings-reset').then(() => {
                 current = {
                     ...current, ...{
-                        alwaysOnTop: false, openPos: 'top-centre',
-                        saveFolder: null, videoFormat: 'webm', selectedScreenId: null
+                        alwaysOnTop: false, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
                     }
-                };
-                populate();
+                }; fill();
             });
+            $('#closeBtn').onclick = () => window.close();
         };
-
-        $('#closeBtn').onclick = () => window.close();
     </script>
 </body>
 
