@@ -1,0 +1,142 @@
+body {
+    /* background: url('img/body.png');
+    background-repeat: no-repeat;
+    background-size: cover; */
+    margin: 0;
+    background: transparent;
+    /* let the transparent window shine through */
+}
+
+.recorder {
+    background-color: #1F1F1F;
+    width: 572px;
+    /* width: 100vw; */
+    height: 100%;
+    margin-top: 0;
+    border-radius: 8px;
+    border: 1px solid #565656;
+    display: flex;
+    align-items: centre;
+    -webkit-app-region: drag;
+}
+
+.close-btn,
+.rec-btn,
+.stop-btn,
+.settings-btn {
+    -webkit-app-region: no-drag;
+    /* but buttons stay clickable */
+}
+
+.timer {
+    font-family: 'Inter', sans-serif;
+    font-size: large;
+    color: #D9D9D9;
+    height: 32px;
+    width: 102px;
+    padding-top: 16px;
+    margin-left: 20px;
+    margin-right: 10px;
+}
+
+.hrminsec {
+    /* color: #565656; */
+    color: #5E5E5E;
+    font-size: 8px;
+    font-weight: bold;
+    margin-top: -6px;
+
+}
+
+.rec-btn {
+    /* background-image: url("img/Record-Button.svg"); */
+    background-image: url("../img/Record-Button.svg");
+    background-color: #1F1F1F;
+    border: none;
+    height: 32px;
+    width: 110px;
+    margin: 10px 10px;
+}
+
+.rec-btn:hover {
+    cursor: pointer;
+    /* background-image: url("img/Record-Button-Hover.svg"); */
+    background-image: url("../img/Record-Button-Hover.svg");
+
+}
+
+.rec-btn:active {
+    /* background-image: url("img/Record-Button-Activate.svg"); */
+    background-image: url("../img/Record-Button-Activate.svg");
+}
+
+.stop-btn {
+    /* background-image: url("img/Stop-Button.svg"); */
+    background-image: url("../img/Stop-Button.svg");
+    background-color: #1F1F1F;
+    border: none;
+    height: 32px;
+    width: 94px;
+    margin: 10px 10px;
+}
+
+.stop-btn:hover {
+    cursor: pointer;
+    /* background-image: url("img/Stop-Button-Hover.svg"); */
+    background-image: url("../img/Stop-Button-Hover.svg");
+
+}
+
+.stop-btn:active {
+    /* background-image: url("img/Stop-Button-Active.svg"); */
+    background-image: url("../img/Stop-Button-Active.svg");
+}
+
+.vl {
+    /* border-left: 1px solid #D9D9D9; */
+    border-left: 1px solid #565656;
+    height: 38px;
+    margin: 7px 6px;
+}
+
+.settings-btn {
+    /* background-image: url("img/Settings-Button.svg"); */
+    background-image: url("../img/Settings-Button.svg");
+    background-color: #1F1F1F;
+    border: none;
+    height: 32px;
+    width: 118px;
+    margin: 10px 10px;
+}
+
+.settings-btn:hover {
+    cursor: pointer;
+    /* background-image: url("img/Settings-Button-Hover.svg"); */
+    background-image: url("../img/Settings-Button-Hover.svg");
+}
+
+.settings-btn:active {
+    /* background-image: url("img/Settings-Button-Active.svg"); */
+    background-image: url("../img/Settings-Button-Active.svg");
+}
+
+.close-btn {
+    /* background-image: url("img/Close-Button-3.svg"); */
+    background-image: url("../img/Close-Button-3.svg");
+    background-color: #1F1F1F;
+    border: none;
+    height: 32px;
+    width: 32px;
+    margin: 10px 1px;
+}
+
+.close-btn:hover {
+    cursor: pointer;
+    /* background-image: url("img/Close-Button-Hover.svg"); */
+    background-image: url("../img/Close-Button-Hover.svg");
+}
+
+.close-btn:active {
+    /* background-image: url("img/Close-Button-Active.svg"); */
+    background-image: url("../img/Close-Button-Active.svg");
+}

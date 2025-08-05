@@ -1,0 +1,28 @@
+body {
+    /* font: 13px/1.4 system-ui, sans-serif; */
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    font: 16px sans-serif;
+    color: #D9D9D9;
+    background: transparent;
+}
+
+.modal {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 95vh;
+    background: #1F1F1F;
+    border: 1px solid #565656;
+    border-radius: 8px;
+    -webkit-app-region: drag;
+}
+
+progress {
+    width: 90%;
+    height: 6px;
+    margin-top: 10px;
+}

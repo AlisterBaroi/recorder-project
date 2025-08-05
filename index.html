@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Inter font for the timer -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/index.css">
+    <title>Screen Recorder Desktop App</title>
+</head>
+
+<body>
+    <div class="recorder">
+        <!-- <div class="timer"> 0 0 : 0 0 : 0 0 </div> -->
+        <div class="timer">
+            <div class="hrminsec">Hr : Min : Sec</div>
+            <div class="" id="clock"> 00 : 00 : 00 </div>
+        </div>
+        <!-- Button to start recording -->
+        <button class="rec-btn"></button>
+
+        <!-- Button to stop recording -->
+        <button class="stop-btn"></button>
+
+        <!-- Vertical divider -->
+        <div class="vl"></div>
+
+        <!-- Button to settings menu -->
+        <button class="settings-btn"></button>
+
+        <!-- Button to close recorder -->
+        <button class="close-btn"></button>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+
+</html>

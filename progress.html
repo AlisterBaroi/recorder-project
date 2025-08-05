@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/progress.css">
+    <title>Saving…</title>
+</head>
+
+<body>
+    <div class="modal">
+        <div>Saving MP4…<span id="pct">0</span>%</div>
+        <progress id="bar" value="0" max="1"></progress>
+    </div>
+    <script>
+        /* Listen for progress events from the parent window */
+        const { ipcRenderer } = require('electron');
+        ipcRenderer.on('progress', (_, f) => {
+            document.getElementById('bar').value = f;
+            document.getElementById('pct').textContent = Math.round(f * 100);
+        });
+    </script>
+</body>
+
+</html>

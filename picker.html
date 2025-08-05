@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/picker.css">
+    <title>Choose screen</title>
+</head>
+
+<body></body>
+<script>
+    const { ipcRenderer } = require('electron');
+
+    ipcRenderer.on('screens', (_, list) => {
+        list.forEach(scr => {
+            const btn = document.createElement('button');
+            btn.innerHTML = `<img src="${scr.dataURL}"><label>${scr.name}</label>`;
+            btn.onclick = () => ipcRenderer.send('screen-chosen', scr.id);
+            document.body.appendChild(btn);
+        });
+    });
+</script>
+
+</html>
