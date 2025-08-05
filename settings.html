@@ -3,16 +3,174 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Inter font for the timer -->
     <link rel="preconnect" href="https://fonts.gstatic.com" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles/settings.css">
-    <title>Document</title>
+    <title>Settings</title>
 </head>
 
 <body>
 
+    <nav>
+        <button data-tab="general" class="active">General&nbsp;Settings</button>
+        <button data-tab="screen">Select&nbsp;Screen</button>
+        <button data-tab="files">File&nbsp;&amp;&nbsp;Folder</button>
+        <button data-tab="about">About</button>
+    </nav>
+
+    <div id="content">
+        <!-- General Settings -->
+        <section id="tab-general" class="active">
+            <h2>General Settings</h2>
+            <label><input type="checkbox" id="alwaysOnTop"> Window always on top</label><br><br>
+
+            <label>Open position:
+                <select id="openPos">
+                    <option value="top-centre">Top-centre</option>
+                    <option value="middle-centre">Centre-centre</option>
+                    <option value="bottom-centre">Bottom-centre</option>
+                </select>
+            </label><br><br>
+
+            <!-- Place-holders for future options -->
+            <p>Theme: <em>(coming soon)</em></p>
+            <p>Fonts: <em>(coming soon)</em></p>
+        </section>
+
+        <!-- Select Screen -->
+        <section id="tab-screen">
+            <h2>Select Screen</h2>
+            <div id="screenList"><!-- filled by JS --></div>
+            <p style="margin-top:12px">Selected: <span id="screenChosen">None</span></p>
+        </section>
+
+        <!-- File & Folder -->
+        <section id="tab-files">
+            <h2>File &amp; Folder</h2>
+            <label>Save folder: <span id="savePath">(not set)</span>
+                <button id="chooseFolder">Browse…</button>
+            </label><br><br>
+
+            <label>Video format:
+                <select id="videoFormat">
+                    <option value="webm">WebM (fast)</option>
+                    <option value="mp4">MP4 (higher quality)</option>
+                </select>
+            </label>
+        </section>
+
+        <!-- About -->
+        <section id="tab-about">
+            <h2>About</h2>
+            <p>Author: <a href="https://github.com/yourname" target="_blank">yourname</a></p>
+            <p>GitHub project: <a href="https://github.com/yourrepo" target="_blank">Star us on GitHub</a></p>
+            <p>Donate / Sponsor: <em>(coming soon)</em></p>
+            <p>Feedback &amp; bug report forms: <em>(coming soon)</em></p>
+        </section>
+    </div>
+
+    <!-- <footer>
+        <button id="resetBtn" style="background:#555">Reset</button>
+        <button id="closeBtn" style="background:#555">Close</button>
+        <button id="saveBtn">Save</button>
+    </footer> -->
+
+    <footer>
+        <button id="resetBtn" style="background:#555">Reset</button>
+
+        <div style="margin-left:auto"> <!-- pushes following buttons to the right -->
+            <button id="closeBtn" style="background:#555">Close</button>
+            <button id="saveBtn">Save</button>
+        </div>
+    </footer>
+
+    <!-- <script>
+        /* basic tab switching */
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('nav button.active').classList.remove('active');
+                document.querySelector('#content section.active').classList.remove('active');
+                btn.classList.add('active');
+                document.querySelector('#tab-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+
+        /* TODO: load settings.json, populate controls, wire up save / reset / close */
+
+        /* placeholder handlers for bottom buttons */
+        document.getElementById('closeBtn').onclick = () => require('@electron/remote').getCurrentWindow().close();
+        document.getElementById('resetBtn').onclick = () => alert('reset to defaults - todo');
+        document.getElementById('saveBtn').onclick = () => alert('save settings - todo');
+    </script> -->
+    <script>
+        const { ipcRenderer, shell } = require('electron');
+        let current = {};   // local copy of settings
+
+        /* ── UI helpers ─────────────────────── */
+        function $(sel) { return document.querySelector(sel); }
+        function populate() {
+            $('#alwaysOnTop').checked = current.alwaysOnTop;
+            $('#openPos').value = current.openPos;
+            $('#savePath').textContent = current.saveFolder || '(ask every time)';
+            $('#videoFormat').value = current.videoFormat;
+            $('#screenChosen').textContent = current.selectedScreenId || 'None';
+        }
+
+        /* load on launch */
+        ipcRenderer.invoke('settings-load').then(s => { current = s; populate(); });
+
+        /* EVENTS ------------------------------------------------------------- */
+        $('#alwaysOnTop').onchange = e => current.alwaysOnTop = e.target.checked;
+        $('#openPos').onchange = e => current.openPos = e.target.value;
+        $('#videoFormat').onchange = e => current.videoFormat = e.target.value;
+
+        $('#chooseFolder').onclick = async () => {
+            const { dialog } = require('@electron/remote');
+            const r = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+            if (!r.canceled && r.filePaths[0]) {
+                current.saveFolder = r.filePaths[0];
+                $('#savePath').textContent = current.saveFolder;
+            }
+        };
+
+        /* screen picker reused from main process */
+        ipcRenderer.on('screens', (_, list) => {
+            const wrap = $('#screenList');
+            wrap.innerHTML = '';
+            list.forEach(scr => {
+                const b = document.createElement('button');
+                b.style = 'border:none;background:#333;margin:4px;cursor:pointer';
+                b.innerHTML = `<img src=\"${scr.dataURL}\" width=120><br>${scr.name}`;
+                b.onclick = () => {
+                    current.selectedScreenId = scr.id;
+                    $('#screenChosen').textContent = scr.id;
+                };
+                wrap.appendChild(b);
+            });
+        });
+        $('#tab-screen').addEventListener('mouseenter', () => {
+            ipcRenderer.invoke('pick-screen-list'); // just send list without closing picker
+        });
+
+        /* bottom bar buttons */
+        $('#saveBtn').onclick = () => ipcRenderer.invoke('settings-save', current)
+            .then(() => window.close());
+
+        $('#resetBtn').onclick = () => {
+            ipcRenderer.invoke('settings-reset').then(() => {
+                current = {
+                    ...current, ...{
+                        alwaysOnTop: false, openPos: 'top-centre',
+                        saveFolder: null, videoFormat: 'webm', selectedScreenId: null
+                    }
+                };
+                populate();
+            });
+        };
+
+        $('#closeBtn').onclick = () => window.close();
+    </script>
 </body>
 
 </html>

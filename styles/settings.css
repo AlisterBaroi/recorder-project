@@ -1,3 +1,83 @@
+:root {
+    --nav-width: 150px;
+    --bg-dark: #1e1e1e;
+    --bg-light: #2b2b2b;
+    --fg: #d9d9d9;
+    --accent: #af2031;
+    /* font-family: system-ui, sans-serif; */
+    font-family: 'Inter', sans-serif;
+    color: var(--fg);
+}
+
 body {
     margin: 0;
+    display: flex;
+    height: 100vh;
+    background: var(--bg-dark);
+}
+
+/* ── left-hand nav ─────────────────────────── */
+nav {
+    width: var(--nav-width);
+    background: var(--bg-light);
+    display: flex;
+    flex-direction: column;
+}
+
+nav button {
+    appearance: none;
+    border: none;
+    background: none;
+    padding: 12px 16px;
+    text-align: left;
+    font: 14px/1.4 inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+nav button:hover,
+nav button.active {
+    background: #3c3c3c;
+}
+
+/* ── content area ──────────────────────────── */
+#content {
+    flex: 1;
+    padding: 24px 32px;
+    overflow: auto;
+}
+
+section {
+    display: none;
+}
+
+section.active {
+    display: block;
+}
+
+h2 {
+    margin-top: 0;
+    font-size: 18px
+}
+
+/* ── bottom bar ────────────────────────────── */
+footer {
+    position: fixed;
+    bottom: 0;
+    left: var(--nav-width);
+    right: 0;
+    background: var(--bg-light);
+    padding: 8px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+footer button {
+    min-width: 80px;
+    padding: 6px 12px;
+    border: none;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
 }
