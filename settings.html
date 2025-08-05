@@ -159,7 +159,7 @@
             $('#resetBtn').onclick = () => ipcRenderer.invoke('settings-reset').then(() => {
                 current = {
                     ...current, ...{
-                        alwaysOnTop: false, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
+                        alwaysOnTop: true, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
                     }
                 }; fill();
             });

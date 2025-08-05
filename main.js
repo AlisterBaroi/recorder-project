@@ -16,7 +16,7 @@ app.commandLine.appendSwitch('allow-http-screen-capture');
 const storePath = path.join(app.getPath('userData'), 'settings.json');
 
 const defaults = {
-    alwaysOnTop: false,
+    alwaysOnTop: true,
     openPos: 'bottom-centre',         // 'top-centre' | 'middle-centre' | 'bottom-centre'
     saveFolder: null,                 // null = ask each time
     videoFormat: 'webm',               // 'webm' | 'mp4'

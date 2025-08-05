@@ -168,12 +168,25 @@
         ]);
 
         ff.stdout.on('data', d => {
-            const m = /out_time_ms=(\\d+)/.exec(d.toString());
-            if (m) {
-                const done = Math.min(+m[1] / (totalMs * 1000), 1);
-                progressWin.webContents.send('progress', done);
+            const str = d.toString();
+            /* prefer microseconds, fall back to HH:MM:SS.MICRO */
+            let done = null;
+
+            const m1 = /out_time_ms=(\d+)/.exec(str);
+            if (m1) {
+                done = +m1[1] / (totalMs * 1000);          // micro → milli
+            } else {
+                const m2 = /out_time=(\d+):(\d+):(\d+\.\d+)/.exec(str);
+                if (m2) {
+                    const secs = (+m2[1]) * 3600 + (+m2[2]) * 60 + parseFloat(m2[3]);
+                    done = secs * 1000 / totalMs;
+                }
+            }
+            if (done !== null) {
+                progressWin.webContents.send('progress', Math.min(done, 1));
             }
         });
+
 
         ff.on('close', code => {
             fs.unlinkSync(src);
