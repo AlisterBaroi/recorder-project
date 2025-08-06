@@ -128,25 +128,55 @@
             ? dlg.filePath
             : `${dlg.filePath}.${targetExt}`;
 
-        /* 1️⃣  if container already matches → quick copy */
+        // if container already matches → copy
         if (srcExt === targetExt) {
-            fs.copyFileSync(tempFile, finalPath);
-            fs.unlinkSync(tempFile);
-            return afterSave(finalPath);
+            await showCopyProgress(tempFile, finalPath, afterSave);
+            return;         // all done
         }
 
-        /* 2️⃣  need to transcode (only mp4 path for now) */
+        /* need to transcode (only mp4 path for now) */
         if (targetExt === 'mp4') {
             return transcodeToMp4(tempFile, finalPath);
         }
 
-        /* 3️⃣  targetExt === 'webm' but we recorded mp4 (rare) */
+        /* targetExt === 'webm' but we recorded mp4 (rare) */
         fs.copyFileSync(tempFile, finalPath);     // simplest fallback
         fs.unlinkSync(tempFile);
         afterSave(finalPath);
     }
+    // progress bar for webm format
+    //  Copy a file while streaming progress (0‒1) to progress.html, then call cb(finalPath) once complete.
+    function showCopyProgress(srcPath, destPath, cb) {
+        return new Promise(resolve => {
+            const progressWin = new BrowserWindow({
+                width: 320, height: 80, resizable: false, modal: true,
+                parent: require('@electron/remote').getCurrentWindow(), frame: false, transparent: true, backgroundColor: '#00000000',
+                alwaysOnTop: true, center: true, webPreferences: { nodeIntegration: true, contextIsolation: false }
+            }); progressWin.loadFile('progress.html');
 
-    /* run ffmpeg + show progress window */
+            progressWin.webContents.once('did-finish-load', () => {
+                const { size } = fs.statSync(srcPath); let copied = 0;
+                progressWin.webContents.send('progress', 0);
+                const read = fs.createReadStream(srcPath);
+                const write = fs.createWriteStream(destPath);
+                read.on('data', chunk => {
+                    copied += chunk.length; progressWin.webContents.send('progress', Math.min(copied / size, 1));
+                });
+
+                write.on('close', () => {
+                    fs.unlinkSync(srcPath);
+                    progressWin.webContents.send('progress', 1);
+                    setTimeout(() => {
+                        progressWin.close(); cb(destPath);     // afterSave()
+                        resolve();
+                    }, 500);            // 0.5-sec linger at 100 %
+                });
+                read.pipe(write);
+            });
+        });
+    }
+
+    /* run ffmpeg + show progress window for mp4 format */
     function transcodeToMp4(src, dest) {
         const progressWin = new BrowserWindow({
             width: 320, height: 80, resizable: false, modal: true,
@@ -187,13 +217,22 @@
             }
         });
 
-
         ff.on('close', code => {
             fs.unlinkSync(src);
-            progressWin.close();
-            if (code === 0) afterSave(dest);
-            else dialog.showErrorBox('FFmpeg error', `Transcoding failed (code ${code}).`);
+            if (code === 0) {
+                /* make absolutely sure the bar shows 100 % */
+                progressWin.webContents.send('progress', 1);
+
+                setTimeout(() => {  /* leave visible for 500ms before closing */
+                    progressWin.close();
+                    afterSave(dest);            // persist prefs, etc.
+                }, 500);                      // 0.5 s
+            } else {
+                progressWin.close();
+                dialog.showErrorBox('FFmpeg error', `Transcoding failed (${code}).`);
+            }
         });
+
     }
 
     /* remember prefs & persist */

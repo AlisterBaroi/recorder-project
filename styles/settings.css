@@ -109,10 +109,23 @@ hr {
     color: var(--bg-dark) !important;
 }
 
-#screenList button:active {
+#screenList button.selected {
+    background: var(--accent-2) !important;
+    color: var(--bg-dark) !important;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+/* hover only if NOT already selected */
+#screenList button:hover:not(.selected) {
+    background: var(--fg) !important;
+    color: var(--bg-dark) !important;
+}
+
+/* #screenList button:active {
     background: var(--accent-2) !important;
     font-weight: bold;
-}
+} */
 
 /* ── bottom bar ────────────────────────────── */
 footer {

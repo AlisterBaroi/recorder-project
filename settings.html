@@ -132,32 +132,74 @@
             };
 
             /* receive thumbnail list for Screen tab */
+            // ipcRenderer.on('screens', (_, list) => {
+            //     const wrap = $('#screenList'); wrap.innerHTML = '';
+            //     list.forEach(scr => {
+            //         const btn = document.createElement('button');
+            //         // btn.style = 'border:none;background:#333;cursor:pointer;color:#D9D9D9;';
+            //         btn.style = 'border:none;cursor:pointer;';
+            //         btn.innerHTML = `<img src=\"${scr.dataURL}\" width=180><br>${scr.id}`;
+            //         btn.onclick = () => {
+            //             current.selectedScreenId = scr.id;
+            //             $('#screenChosen').textContent = scr.id;
+            //             btn.style = 'border:none;font-weight:bold;background:#84B5FF;color:#1e1e1e;pointer:not-not-alllowed';
+            //             // btn.style.pointerEvents = 'none';
+            //         };
+            //         wrap.appendChild(btn);
+            //     });
+            // });
+
+            /* keep track of which button is selected */
+            let currentBtn = null;
+
             ipcRenderer.on('screens', (_, list) => {
-                const wrap = $('#screenList'); wrap.innerHTML = '';
+                const wrap = $('#screenList');
+                wrap.innerHTML = '';
+
                 list.forEach(scr => {
                     const btn = document.createElement('button');
-                    // btn.style = 'border:none;background:#333;cursor:pointer;color:#D9D9D9;';
                     btn.style = 'border:none;cursor:pointer;';
-                    btn.innerHTML = `<img src=\"${scr.dataURL}\" width=180><br>${scr.id}`;
+                    btn.innerHTML = `<img src="${scr.dataURL}" width="180"><br>${scr.id}`;
+
+                    /* pre-select based on settings.json */
+                    if (scr.id === current.selectedScreenId) {
+                        btn.classList.add('selected');
+                        currentBtn = btn;
+                    }
+
                     btn.onclick = () => {
+                        /* enable previously selected button */
+                        if (currentBtn) currentBtn.classList.remove('selected');
+
+                        /* mark new one */
+                        btn.classList.add('selected');
+                        currentBtn = btn;
+
                         current.selectedScreenId = scr.id;
                         $('#screenChosen').textContent = scr.id;
-                        btn.style = 'border:none;font-weight:bold;background:#84B5FF;color:#1e1e1e;pointer:not-not-alllowed';
-                        // btn.style.pointerEvents = 'none';
                     };
+
                     wrap.appendChild(btn);
                 });
             });
 
             /* ── footer buttons ── */
             $('#saveBtn').onclick = () => ipcRenderer.invoke('settings-save', current).then(() => window.close());
-            $('#resetBtn').onclick = () => ipcRenderer.invoke('settings-reset').then(() => {
-                current = {
-                    ...current, ...{
-                        alwaysOnTop: true, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
-                    }
-                }; fill();
-            });
+            // reset button
+            $('#resetBtn').onclick = () => {
+                ipcRenderer.invoke('settings-reset').then(() => {
+                    current = {     /* clear local prefs */
+                        alwaysOnTop: false, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
+                    };
+                    /* undo any screen highlight immediately */
+                    if (currentBtn) { currentBtn.classList.remove('selected'); currentBtn = null; }
+                    $('#screenChosen').textContent = 'None';
+                    fill();   // refresh the rest of the controls
+                });
+            };
+
+
+
             $('#closeBtn').onclick = () => window.close();
         };
     </script>
