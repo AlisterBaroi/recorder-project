@@ -44,7 +44,7 @@
         recBtn.disabled = true;
         recBtn.style.pointerEvents = 'none';
         recBtn.style.cursor = 'not-allowed';
-        recBtn.style.backgroundImage = "url('img/Record-Button-Activate.svg')";
+        recBtn.style.backgroundImage = "url('assets/images/Record-Button-Activate.svg')";
         clock.style.color = '#AF2031';
     };
     const unlock = () => {

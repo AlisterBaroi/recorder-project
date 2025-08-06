@@ -1,10 +1,30 @@
+/* Regular 400 */
+@font-face {
+    font-family: 'Inter';
+    src: url('../assets/fonts/Inter-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* text appears immediately, swaps when font is ready */
+
+/* Bold 700 */
+@font-face {
+    font-family: 'Inter';
+    src: url('../assets/fonts/Inter-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     --nav-width: 150px;
     --bg-dark: #1e1e1e;
     --bg-light: #2b2b2b;
-    --fg: #d9d9d9;
-    --accent: #af2031;
-    /* font-family: system-ui, sans-serif; */
+    --fg: #D9D9D9;
+    --accent: #AF2031;
+    --accent-2: #84B5FF;
     font-family: 'Inter', sans-serif;
     color: var(--fg);
 }
@@ -14,6 +34,7 @@ body {
     display: flex;
     height: 100vh;
     background: var(--bg-dark);
+
 }
 
 /* ── left-hand nav ─────────────────────────── */
@@ -71,13 +92,31 @@ hr {
     /* margin-bottom: 20px; */
 }
 
+#screenList {
+    padding: 0;
+    margin: 0;
+}
+
+#screenList button {
+    background: var(--bg-light);
+    color: var(--fg);
+    padding-bottom: 6px;
+    margin: 0 5px 10px 5px !important;
+}
+
 #screenList button:hover {
-    background: #D9D9D9 !important;
-    color: #1e1e1e !important;
+    background: var(--fg) !important;
+    color: var(--bg-dark) !important;
+}
+
+#screenList button:active {
+    background: var(--accent-2) !important;
+    font-weight: bold;
 }
 
 /* ── bottom bar ────────────────────────────── */
 footer {
+    font-family: 'Inter', sans-serif;
     position: fixed;
     bottom: 0;
     left: var(--nav-width);

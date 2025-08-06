@@ -1,3 +1,22 @@
+/* Regular 400 */
+@font-face {
+    font-family: 'Inter';
+    src: url('../assets/fonts/Inter-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+    /* text appears immediately, swaps when font is ready */
+}
+
+/* Bold 700 */
+@font-face {
+    font-family: 'Inter';
+    src: url('../assets/fonts/Inter-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 body {
     /* background: url('img/body.png');
     background-repeat: no-repeat;
@@ -50,7 +69,7 @@ body {
 
 .rec-btn {
     /* background-image: url("img/Record-Button.svg"); */
-    background-image: url("../img/Record-Button.svg");
+    background-image: url("../assets/images/Record-Button.svg");
     background-color: #1F1F1F;
     border: none;
     height: 32px;
@@ -61,18 +80,18 @@ body {
 .rec-btn:hover {
     cursor: pointer;
     /* background-image: url("img/Record-Button-Hover.svg"); */
-    background-image: url("../img/Record-Button-Hover.svg");
+    background-image: url("../assets/images/Record-Button-Hover.svg");
 
 }
 
 .rec-btn:active {
     /* background-image: url("img/Record-Button-Activate.svg"); */
-    background-image: url("../img/Record-Button-Activate.svg");
+    background-image: url("../assets/images/Record-Button-Activate.svg");
 }
 
 .stop-btn {
     /* background-image: url("img/Stop-Button.svg"); */
-    background-image: url("../img/Stop-Button.svg");
+    background-image: url("../assets/images/Stop-Button.svg");
     background-color: #1F1F1F;
     border: none;
     height: 32px;
@@ -83,13 +102,13 @@ body {
 .stop-btn:hover {
     cursor: pointer;
     /* background-image: url("img/Stop-Button-Hover.svg"); */
-    background-image: url("../img/Stop-Button-Hover.svg");
+    background-image: url("../assets/images/Stop-Button-Hover.svg");
 
 }
 
 .stop-btn:active {
     /* background-image: url("img/Stop-Button-Active.svg"); */
-    background-image: url("../img/Stop-Button-Active.svg");
+    background-image: url("../assets/images/Stop-Button-Active.svg");
 }
 
 .vl {
@@ -101,7 +120,7 @@ body {
 
 .settings-btn {
     /* background-image: url("img/Settings-Button.svg"); */
-    background-image: url("../img/Settings-Button.svg");
+    background-image: url("../assets/images/Settings-Button.svg");
     background-color: #1F1F1F;
     border: none;
     height: 32px;
@@ -112,17 +131,17 @@ body {
 .settings-btn:hover {
     cursor: pointer;
     /* background-image: url("img/Settings-Button-Hover.svg"); */
-    background-image: url("../img/Settings-Button-Hover.svg");
+    background-image: url("../assets/images/Settings-Button-Hover.svg");
 }
 
 .settings-btn:active {
     /* background-image: url("img/Settings-Button-Active.svg"); */
-    background-image: url("../img/Settings-Button-Active.svg");
+    background-image: url("../assets/images/Settings-Button-Active.svg");
 }
 
 .close-btn {
     /* background-image: url("img/Close-Button-3.svg"); */
-    background-image: url("../img/Close-Button-3.svg");
+    background-image: url("../assets/images/Close-Button-3.svg");
     background-color: #1F1F1F;
     border: none;
     height: 32px;
@@ -133,10 +152,10 @@ body {
 .close-btn:hover {
     cursor: pointer;
     /* background-image: url("img/Close-Button-Hover.svg"); */
-    background-image: url("../img/Close-Button-Hover.svg");
+    background-image: url("../assets/images/Close-Button-Hover.svg");
 }
 
 .close-btn:active {
     /* background-image: url("img/Close-Button-Active.svg"); */
-    background-image: url("../img/Close-Button-Active.svg");
+    background-image: url("../assets/images/Close-Button-Active.svg");
 }
