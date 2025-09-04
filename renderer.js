@@ -153,29 +153,19 @@
         const targetExt = videoFormat; // 'mp4' or 'webm'
 
         // /* destination dialog honours user's chosen format */
-        // const startDir = defaultFolder || os.homedir();
-        // const dlg = await dialog.showSaveDialog({
-        //     defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
-        //     filters: [{ name: 'Video', extensions: [targetExt] }]
-        // });
-        // if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
-
-        // const finalPath = dlg.filePath.endsWith(`.${targetExt}`)
-        //     ? dlg.filePath
-        //     : `${dlg.filePath}.${targetExt}`;
-
         /* where to save: if a default folder exists & is writable, skip the dialog */
         let finalPath;
         const useFolder = defaultFolder && fs.existsSync(defaultFolder);
         if (useFolder) {
-            // timestamped base name; adjust to your taste
+            // timestamped base name
             const base = `recording-${new Date().toISOString().replace(/[.:]/g, '-')}`;
             finalPath = makeUniquePath(defaultFolder, base, targetExt);
         } else {
             // fall back to Save As… dialogue
             const startDir = defaultFolder || os.homedir();
             const dlg = await dialog.showSaveDialog({
-                defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
+                // defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
+                defaultPath: path.join(startDir, `recording-${new Date().toISOString().replace(/[.:]/g, '-')}.${targetExt}`),
                 filters: [{ name: 'Video', extensions: [targetExt] }]
             });
             if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
@@ -184,17 +174,11 @@
                 : `${dlg.filePath}.${targetExt}`;
         }
 
-
-
-
-
-
         // if container already matches → copy
         if (srcExt === targetExt) {
             await showCopyProgress(tempFile, finalPath, afterSave);
             return;         // all done
         }
-
 
         /* need to transcode (only mp4 path for now) */
         if (targetExt === 'mp4') {
@@ -263,7 +247,6 @@
             const str = d.toString();
             /* prefer microseconds, fall back to HH:MM:SS.MICRO */
             let done = null;
-
             const m1 = /out_time_ms=(\d+)/.exec(str);
             if (m1) {
                 done = +m1[1] / (totalMs * 1000);          // micro → milli
@@ -284,7 +267,6 @@
             if (code === 0) {
                 /* make absolutely sure the bar shows 100 % */
                 progressWin.webContents.send('progress', 1);
-
                 setTimeout(() => {  /* leave visible for 500ms before closing */
                     progressWin.close();
                     afterSave(dest);            // persist prefs, etc.
@@ -304,31 +286,29 @@
         prefs.selectedScreenId = selectedSourceId;
         prefs.videoFormat = videoFormat;
         ipcRenderer.invoke('settings-save', prefs);
-
-        // Open the destination folder and select the saved file
-        try { shell.showItemInFolder(finalPath); } catch (_) { }
+        try { shell.showItemInFolder(finalPath); } catch (_) { } // Open destination folder & select saved file
     }
 
-    function revealFile(fullPath) {
-        try {
-            if (fs.existsSync(fullPath)) {
-                shell.showItemInFolder(fullPath);      // Windows/macOS and many Linux FMs
-            } else {
-                shell.openPath(path.dirname(fullPath)); // if file was moved/deleted
-            }
-        } catch (e) {
-            // Fallback if reveal not supported by the file manager
-            shell.openPath(path.dirname(fullPath));
-        }
-    }
+    // Optional code to work later on (for just revealing folder on save, if selecting file doesn't work)
+    // function revealFile(fullPath) {
+    //     try {
+    //         if (fs.existsSync(fullPath)) {
+    //             shell.showItemInFolder(fullPath);      // Windows/macOS and many Linux FMs
+    //         } else {
+    //             shell.openPath(path.dirname(fullPath)); // if file was moved/deleted
+    //         }
+    //     } catch (e) {
+    //         // Fallback if reveal not supported by the file manager
+    //         shell.openPath(path.dirname(fullPath));
+    //     }
+    // }
 
     /* ── UI event wiring ───────────────────────────────────── */
-    // settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
     settingsBtn.addEventListener('click', async () => {
         lockSettingsBtn();
         try { await ipcRenderer.invoke('open-settings'); } finally { unlockSettingsBtn(); }  // returns when window closes
     });
-
+    // settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
     recBtn.addEventListener('click', startRec);
     stopBtn.addEventListener('click', () => mediaRecorder?.stop());
     closeBtn.addEventListener('click', () =>
