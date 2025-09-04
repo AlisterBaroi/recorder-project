@@ -1,5 +1,6 @@
 {
     "name": "screen-recorder",
+    "productName": "Open Recorder",
     "version": "1.0.0",
     "description": "Desktop screen recorder built with Electron",
     "main": "main.js",
