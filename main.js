@@ -125,22 +125,48 @@ ipcMain.handle('pick-screen-list', async () => {
 });
 
 /* ─── Settings window ──────────────────────────────────────────────── */
-ipcMain.handle('open-settings', async () => {
-    const existing = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Settings');
-    if (existing) { existing.focus(); return; }
+// ipcMain.handle('open-settings', async () => {
+//     const existing = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Settings');
+//     if (existing) { existing.focus(); return; }
 
-    const parent = BrowserWindow.getFocusedWindow();
-    const win = new BrowserWindow({
-        width: 640, height: 420,
-        resizable: false, modal: true, parent,
-        frame: true, transparent: false, backgroundColor: '#00000000',
-        webPreferences: { nodeIntegration: true, contextIsolation: false }
+//     const parent = BrowserWindow.getFocusedWindow();
+//     const win = new BrowserWindow({
+//         width: 640, height: 420,
+//         resizable: false, modal: true, parent,
+//         frame: true, transparent: false, backgroundColor: '#00000000',
+//         webPreferences: { nodeIntegration: true, contextIsolation: false }
+//     });
+
+//     remoteMain.enable(win.webContents);
+//     win.setMenuBarVisibility(false);
+//     win.center();
+//     win.setTitle('Settings');
+//     win.loadFile('settings.html');
+// });
+ipcMain.handle('open-settings', async (event) => {
+    // Reuse if already open; otherwise create
+    let win = BrowserWindow.getAllWindows().find(w => w.getTitle() === 'Settings');
+    if (!win) {
+        const parent = BrowserWindow.fromWebContents(event.sender);
+        win = new BrowserWindow({
+            width: 640, height: 420,
+            resizable: false, modal: true, parent,
+            frame: true, transparent: false, backgroundColor: '#00000000',
+            webPreferences: { nodeIntegration: true, contextIsolation: false }
+        });
+        remoteMain.enable(win.webContents);
+        win.setMenuBarVisibility(false);
+        win.center();
+        win.setTitle('Settings');
+        win.loadFile('settings.html');
+    } else {
+        win.focus();
+    }
+
+    // Return a promise that resolves when the settings window actually closes
+    return new Promise(resolve => {
+        const done = () => resolve(true);
+        win.once('closed', done);
     });
-
-    remoteMain.enable(win.webContents);
-    win.setMenuBarVisibility(false);
-    win.center();
-    win.setTitle('Settings');
-    win.loadFile('settings.html');
 });
 

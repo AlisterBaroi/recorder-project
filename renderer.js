@@ -60,6 +60,20 @@
         clock.style.color = '#D9D9D9';
     };
 
+    function lockSettingsBtn() {
+        settingsBtn.disabled = true;
+        settingsBtn.style.pointerEvents = 'none';
+        settingsBtn.style.cursor = 'not-allowed';
+        settingsBtn.style.backgroundImage = "url('assets/images/Settings-Button-Active.svg')";
+    }
+
+    function unlockSettingsBtn() {
+        settingsBtn.disabled = false;
+        settingsBtn.style.pointerEvents = 'auto';
+        settingsBtn.style.cursor = '';
+        settingsBtn.style.backgroundImage = ''; // restores CSS hover states
+    }
+
     /* ── pick a screen (modal from main) ───────────────────── */
     async function pickScreen() {
         selectedSourceId = await ipcRenderer.invoke('pick-screen').catch(() => null);
@@ -108,11 +122,21 @@
     }
 
     /* ── save & (if needed) transcode ──────────────────────── */
+
+    // helper: make a unique file path if one already exists
+    function makeUniquePath(dir, baseName, ext) {
+        let p = path.join(dir, `${baseName}.${ext}`);
+        if (!fs.existsSync(p)) return p;
+        let i = 1;
+        while (fs.existsSync(p = path.join(dir, `${baseName}-${i}.${ext}`))) i++;
+        return p;
+    }
+
     async function saveFile() {
         clearInterval(timerRef);
         clock.textContent = '00 : 00 : 00';
-        if (!chunks.length) { return; } // nothing captured
         unlock();
+        if (!chunks.length) { return; } // nothing captured
 
         /* what did MediaRecorder actually give us? */
         const recordedMime = mediaRecorder.mimeType || 'video/webm';
@@ -125,24 +149,52 @@
             Buffer.from(await new Blob(chunks, { type: recordedMime }).arrayBuffer())
         );
 
-        /* destination dialog honours user's chosen format */
-        const targetExt = videoFormat;                       // 'mp4' or 'webm'
-        const startDir = defaultFolder || os.homedir();
-        const dlg = await dialog.showSaveDialog({
-            defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
-            filters: [{ name: 'Video', extensions: [targetExt] }]
-        });
-        if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
+        /* decide target format from settings */
+        const targetExt = videoFormat; // 'mp4' or 'webm'
 
-        const finalPath = dlg.filePath.endsWith(`.${targetExt}`)
-            ? dlg.filePath
-            : `${dlg.filePath}.${targetExt}`;
+        // /* destination dialog honours user's chosen format */
+        // const startDir = defaultFolder || os.homedir();
+        // const dlg = await dialog.showSaveDialog({
+        //     defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
+        //     filters: [{ name: 'Video', extensions: [targetExt] }]
+        // });
+        // if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
+
+        // const finalPath = dlg.filePath.endsWith(`.${targetExt}`)
+        //     ? dlg.filePath
+        //     : `${dlg.filePath}.${targetExt}`;
+
+        /* where to save: if a default folder exists & is writable, skip the dialog */
+        let finalPath;
+        const useFolder = defaultFolder && fs.existsSync(defaultFolder);
+        if (useFolder) {
+            // timestamped base name; adjust to your taste
+            const base = `recording-${new Date().toISOString().replace(/[.:]/g, '-')}`;
+            finalPath = makeUniquePath(defaultFolder, base, targetExt);
+        } else {
+            // fall back to Save As… dialogue
+            const startDir = defaultFolder || os.homedir();
+            const dlg = await dialog.showSaveDialog({
+                defaultPath: path.join(startDir, `recording-${Date.now()}.${targetExt}`),
+                filters: [{ name: 'Video', extensions: [targetExt] }]
+            });
+            if (dlg.canceled) { fs.unlinkSync(tempFile); return; }
+            finalPath = dlg.filePath.endsWith(`.${targetExt}`)
+                ? dlg.filePath
+                : `${dlg.filePath}.${targetExt}`;
+        }
+
+
+
+
+
 
         // if container already matches → copy
         if (srcExt === targetExt) {
             await showCopyProgress(tempFile, finalPath, afterSave);
             return;         // all done
         }
+
 
         /* need to transcode (only mp4 path for now) */
         if (targetExt === 'mp4') {
@@ -271,7 +323,12 @@
     }
 
     /* ── UI event wiring ───────────────────────────────────── */
-    settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
+    // settingsBtn.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
+    settingsBtn.addEventListener('click', async () => {
+        lockSettingsBtn();
+        try { await ipcRenderer.invoke('open-settings'); } finally { unlockSettingsBtn(); }  // returns when window closes
+    });
+
     recBtn.addEventListener('click', startRec);
     stopBtn.addEventListener('click', () => mediaRecorder?.stop());
     closeBtn.addEventListener('click', () =>
