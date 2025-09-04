@@ -31,6 +31,10 @@ function saveSettings(obj) {
     fs.writeFileSync(storePath, JSON.stringify({ ...defaults, ...obj }, null, 2));
 }
 
+function broadcast(obj) {
+    BrowserWindow.getAllWindows().forEach(w => w.webContents.send('settings-updated', obj));
+}
+
 /* create file on first run */
 if (!fs.existsSync(storePath)) saveSettings(defaults);
 
@@ -38,10 +42,6 @@ if (!fs.existsSync(storePath)) saveSettings(defaults);
 ipcMain.handle('get-settings', () => loadSettings());
 ipcMain.handle('settings-save', (_, obj) => { saveSettings(obj); broadcast(obj); });
 ipcMain.handle('settings-reset', () => { saveSettings(defaults); broadcast(defaults); });
-
-function broadcast(obj) {
-    BrowserWindow.getAllWindows().forEach(w => w.webContents.send('settings-updated', obj));
-}
 
 /* ─── Main recorder window ─────────────────────────────────────────── */
 function createWindow() {
@@ -143,3 +143,4 @@ ipcMain.handle('open-settings', async () => {
     win.setTitle('Settings');
     win.loadFile('settings.html');
 });
+

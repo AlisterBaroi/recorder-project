@@ -1,7 +1,7 @@
 /* renderer.js – full version */
 (async () => {
     /* ── imports ───────────────────────────────────────────── */
-    const { ipcRenderer } = require('electron');
+    const { ipcRenderer, shell } = require('electron');
     const { dialog, BrowserWindow } = require('@electron/remote');
     const path = require('path');
     const fs = require('fs');
@@ -28,6 +28,11 @@
         selectedSourceId = prefs.selectedScreenId;
         defaultFolder = prefs.saveFolder;
         videoFormat = prefs.videoFormat;
+        // Activate always-on-top to apply immediately when saved (no restart)
+        if (typeof obj.alwaysOnTop === 'boolean') {
+            require('@electron/remote').getCurrentWindow().setAlwaysOnTop(obj.alwaysOnTop);
+            // currentWin.setAlwaysOnTop(obj.alwaysOnTop);
+        }
     });
 
     /* ── state vars ────────────────────────────────────────── */
@@ -58,7 +63,11 @@
     /* ── pick a screen (modal from main) ───────────────────── */
     async function pickScreen() {
         selectedSourceId = await ipcRenderer.invoke('pick-screen').catch(() => null);
-        prefs.selectedScreenId = selectedSourceId;
+        // prefs.selectedScreenId = selectedSourceId;
+        if (selectedSourceId) {
+            prefs.selectedScreenId = selectedSourceId;
+            ipcRenderer.invoke('settings-save', prefs); // persist right away
+        }
     }
 
     /* ── build a MediaStream for that screen ───────────────── */
@@ -102,6 +111,7 @@
     async function saveFile() {
         clearInterval(timerRef);
         clock.textContent = '00 : 00 : 00';
+        if (!chunks.length) { return; } // nothing captured
         unlock();
 
         /* what did MediaRecorder actually give us? */
@@ -242,6 +252,22 @@
         prefs.selectedScreenId = selectedSourceId;
         prefs.videoFormat = videoFormat;
         ipcRenderer.invoke('settings-save', prefs);
+
+        // Open the destination folder and select the saved file
+        try { shell.showItemInFolder(finalPath); } catch (_) { }
+    }
+
+    function revealFile(fullPath) {
+        try {
+            if (fs.existsSync(fullPath)) {
+                shell.showItemInFolder(fullPath);      // Windows/macOS and many Linux FMs
+            } else {
+                shell.openPath(path.dirname(fullPath)); // if file was moved/deleted
+            }
+        } catch (e) {
+            // Fallback if reveal not supported by the file manager
+            shell.openPath(path.dirname(fullPath));
+        }
     }
 
     /* ── UI event wiring ───────────────────────────────────── */
