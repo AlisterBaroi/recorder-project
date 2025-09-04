@@ -38,7 +38,7 @@ coverage
 bower_components
 
 # Build directory
-ScreenRecorder-win32-x64
+OpenRecorder-win32-x64
 
 # node-waf configuration
 .lock-wscript
