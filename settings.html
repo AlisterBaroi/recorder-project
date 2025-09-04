@@ -186,17 +186,30 @@
             /* ── footer buttons ── */
             $('#saveBtn').onclick = () => ipcRenderer.invoke('settings-save', current).then(() => window.close());
             // reset button
-            $('#resetBtn').onclick = () => {
-                ipcRenderer.invoke('settings-reset').then(() => {
-                    current = {     /* clear local prefs */
-                        alwaysOnTop: false, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
-                    };
-                    /* undo any screen highlight immediately */
-                    if (currentBtn) { currentBtn.classList.remove('selected'); currentBtn = null; }
-                    $('#screenChosen').textContent = 'None';
-                    fill();   // refresh the rest of the controls
-                });
+            // $('#resetBtn').onclick = () => {
+            //     ipcRenderer.invoke('settings-reset').then(() => {
+            //         current = {     /* clear local prefs */
+            //             alwaysOnTop: false, openPos: 'bottom-centre', saveFolder: null, videoFormat: 'webm', selectedScreenId: null
+            //         };
+            //         /* undo any screen highlight immediately */
+            //         if (currentBtn) { currentBtn.classList.remove('selected'); currentBtn = null; }
+            //         $('#screenChosen').textContent = 'None';
+            //         fill();   // refresh the rest of the controls
+            //     });
+            // };
+            $('#resetBtn').onclick = async () => {
+                await ipcRenderer.invoke('settings-reset');
+                // pull the fresh defaults from main.js
+                current = await ipcRenderer.invoke('get-settings');
+                // clear any selected screen highlight immediately (if you track currentBtn)
+                if (typeof currentBtn !== 'undefined' && currentBtn) {
+                    currentBtn.classList.remove('selected');
+                    currentBtn = null;
+                }
+                $('#screenChosen').textContent = 'None';
+                fill();  // updates the checkbox, select boxes, etc.
             };
+
 
 
 
